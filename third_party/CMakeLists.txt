@@ -11,6 +11,7 @@ target_compile_definitions(stm32f4_cmsis INTERFACE
 add_library(stm32f4_hal STATIC
     stm32f4xx-hal-driver/Src/stm32f4xx_hal.c
     stm32f4xx-hal-driver/Src/stm32f4xx_hal_cortex.c
+    stm32f4xx-hal-driver/Src/stm32f4xx_hal_eth.c
     stm32f4xx-hal-driver/Src/stm32f4xx_hal_gpio.c
     stm32f4xx-hal-driver/Src/stm32f4xx_hal_pwr.c
     stm32f4xx-hal-driver/Src/stm32f4xx_hal_pwr_ex.c

@@ -2,6 +2,7 @@
 
 #define HAL_MODULE_ENABLED
 #define HAL_CORTEX_MODULE_ENABLED
+#define HAL_ETH_MODULE_ENABLED
 #define HAL_FLASH_MODULE_ENABLED
 #define HAL_GPIO_MODULE_ENABLED
 #define HAL_PWR_MODULE_ENABLED
@@ -22,10 +23,14 @@
 #define INSTRUCTION_CACHE_ENABLE 1U
 #define DATA_CACHE_ENABLE 1U
 
+#define PHY_READ_TO 100U
+#define PHY_WRITE_TO 100U
+
 #include "stm32f4xx_hal_rcc.h"
 #include "stm32f4xx_hal_gpio.h"
 #include "stm32f4xx_hal_pwr.h"
 #include "stm32f4xx_hal_flash.h"
 #include "stm32f4xx_hal_cortex.h"
+#include "stm32f4xx_hal_eth.h"
 
 #define assert_param(expression) ((void)0U)

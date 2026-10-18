@@ -1,11 +1,12 @@
 # Embedded workshop
 
-Minimal CMake/FreeRTOS firmware skeleton for the STM32F407 Discovery board
+Minimal CMake/FreeRTOS firmware for the STM32F407 Discovery board
 (STM32F407VGT6). It uses the official STM32F4 HAL and CMSIS components without
 requiring a generated STM32CubeMX project.
 
-The initial application starts FreeRTOS and toggles the green LED on PD12 every
-500 ms. The MCU remains on its reset clock, the 16 MHz HSI oscillator.
+The application starts FreeRTOS, retains the button/keyboard input support, and
+runs FreeRTOS-Plus-TCP over the board's KSZ8081RNDCA Ethernet PHY. The PHY is
+polled for link-state changes, so its PE8 interrupt pin is not used.
 
 ## Prerequisites
 
@@ -15,7 +16,7 @@ The initial application starts FreeRTOS and toggles the green LED on PD12 every
   `arm-none-eabi-ar`, `arm-none-eabi-ranlib`, `arm-none-eabi-objcopy`, and
   `arm-none-eabi-size` on PATH)
 - Git and network access during the first configure, to fetch the pinned
-  FreeRTOS kernel release
+  FreeRTOS kernel and FreeRTOS-Plus-TCP releases
 
 ## Build
 
@@ -43,6 +44,26 @@ The build creates these files in `build/debug/`:
 - `embedded_workshop.bin`
 - `embedded_workshop.map`
 
+## Ethernet
+
+The firmware uses these fixed IPv4 settings:
+
+- Address: `192.168.1.42`
+- Netmask: `255.255.255.0`
+- Gateway and DNS: `192.168.1.1`
+- TCP echo service: port `5000`
+
+The locally administered MAC address is derived from the MCU's 96-bit unique
+identifier. Connect the board and a host to the same `192.168.1.0/24` network,
+then test ICMP and the echo service with:
+
+```sh
+ping 192.168.1.42
+printf 'hello\n' | nc 192.168.1.42 5000
+```
+
+The second command should print `hello` back to the terminal.
+
 ## Project layout
 
 - `src/` contains application code.
@@ -65,5 +86,5 @@ The following official STMicroelectronics repositories are Git submodules under
 - [CMSIS Core](https://github.com/STMicroelectronics/cmsis-core.git), commit
   `afc5ca6af0a49232fde7eb4548dd0962d119ce14`
 
-The CMake target currently compiles the HAL GPIO module used by the board LED.
-The submodules pin the commits shown above.
+FreeRTOS-Plus-TCP V4.4.1 is fetched at the exact commit recorded in
+`THIRD_PARTY_NOTICES.md`. The submodules pin the STM32 commits shown above.

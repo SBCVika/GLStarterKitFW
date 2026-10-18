@@ -19,3 +19,15 @@ FetchContent_Declare(
     GIT_SHALLOW TRUE
 )
 FetchContent_MakeAvailable(freertos_kernel)
+
+set(FREERTOS_PLUS_TCP_NETWORK_IF "STM32" CACHE STRING "" FORCE)
+set(FREERTOS_PLUS_TCP_STM32_IF_DRIVER "None" CACHE STRING "" FORCE)
+set(FREERTOS_PLUS_TCP_BUFFER_ALLOCATION "1" CACHE STRING "" FORCE)
+
+FetchContent_Declare(
+    freertos_plus_tcp
+    GIT_REPOSITORY https://github.com/FreeRTOS/FreeRTOS-Plus-TCP.git
+    GIT_TAG c12361095aca68aeed858f45d14395fbffa92c0d
+    GIT_SUBMODULES ""
+)
+FetchContent_MakeAvailable(freertos_plus_tcp)

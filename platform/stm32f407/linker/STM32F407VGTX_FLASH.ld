@@ -179,6 +179,27 @@ SECTIONS
     __bss_end__ = _ebss;
   } >RAM
 
+  .RxDescripSection (NOLOAD) :
+  {
+    . = ALIGN(32);
+    *(.RxDescripSection)
+    . = ALIGN(32);
+  } >RAM
+
+  .TxDescripSection (NOLOAD) :
+  {
+    . = ALIGN(32);
+    *(.TxDescripSection)
+    . = ALIGN(32);
+  } >RAM
+
+  .EthBuffersSection (NOLOAD) :
+  {
+    . = ALIGN(32);
+    *(.EthBuffersSection)
+    . = ALIGN(32);
+  } >RAM
+
   /* User_heap_stack section, used to check that there is enough "RAM" Ram  type memory left */
   ._user_heap_stack :
   {

@@ -6,6 +6,8 @@ extern "C" {
 #include "stm32f407/board.hpp"
 #include "stm32f407/keyboard.hpp"
 
+#include "ethernet.hpp"
+#include "tcp_echo_server.hpp"
 
 namespace {
 
@@ -22,6 +24,16 @@ public:
 
 stm32f407::Keyboard keyboard;
 KeyboardListener keyboard_listener;
+
+constexpr network::EthernetConfig ethernet_config{
+    {192U, 168U, 1U, 42U},
+    {255U, 255U, 255U, 0U},
+    {192U, 168U, 1U, 1U},
+    {192U, 168U, 1U, 1U},
+};
+
+network::Ethernet ethernet{ethernet_config};
+network::TcpEchoServer echo_server;
 
 void led_task(void*)
 {
@@ -68,6 +80,11 @@ int main()
 
     keyboard.set_listener(&keyboard_listener);
     keyboard.start();
+
+    if (!ethernet.start() || !echo_server.start() ||
+        !ethernet.add_link_state_client(echo_server)) {
+        stm32f407::halt();
+    }
 
     vTaskStartScheduler();
     stm32f407::halt();

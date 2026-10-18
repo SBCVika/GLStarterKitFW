@@ -6,6 +6,13 @@ FreeRTOS Kernel V11.3.1 is fetched during CMake configuration from
 <https://github.com/FreeRTOS/FreeRTOS-Kernel>. It is distributed under the MIT
 License included with that project.
 
+## FreeRTOS-Plus-TCP
+
+FreeRTOS-Plus-TCP V4.4.1 is fetched during CMake configuration from
+<https://github.com/FreeRTOS/FreeRTOS-Plus-TCP> at commit
+`c12361095aca68aeed858f45d14395fbffa92c0d`. It is distributed under the MIT
+License included with that project.
+
 ## STM32F4 HAL driver
 
 The STM32F4 HAL driver is cloned from

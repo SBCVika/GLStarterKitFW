@@ -1,5 +1,7 @@
 #pragma once
 
+#define FREERTOS_CONFIG_H
+
 #include <stdint.h>
 
 #ifdef __cplusplus
@@ -18,13 +20,14 @@ extern uint32_t SystemCoreClock;
 #define configTICK_RATE_HZ                      1000
 #define configMAX_PRIORITIES                    5
 #define configMINIMAL_STACK_SIZE                128
-#define configTOTAL_HEAP_SIZE                   (16 * 1024)
+#define configTOTAL_HEAP_SIZE                   (32 * 1024)
 #define configMAX_TASK_NAME_LEN                 16
 #define configTICK_TYPE_WIDTH_IN_BITS           TICK_TYPE_WIDTH_32_BITS
 #define configIDLE_SHOULD_YIELD                 1
 #define configUSE_MUTEXES                       1
 #define configUSE_RECURSIVE_MUTEXES             0
 #define configUSE_COUNTING_SEMAPHORES           1
+#define configUSE_TASK_NOTIFICATIONS            1
 #define INCLUDE_xTaskGetSchedulerState           1
 /* Expose the queue registry required by the RTOS Views debugger extension. */
 #define configQUEUE_REGISTRY_SIZE               10
