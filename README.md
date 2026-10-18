@@ -16,7 +16,7 @@ polled for link-state changes, so its PE8 interrupt pin is not used.
   `arm-none-eabi-ar`, `arm-none-eabi-ranlib`, `arm-none-eabi-objcopy`, and
   `arm-none-eabi-size` on PATH)
 - Git and network access during the first configure, to fetch the pinned
-  FreeRTOS kernel and FreeRTOS-Plus-TCP releases
+  FreeRTOS kernel, FreeRTOS-Plus-TCP, coreMQTT, and coreMQTT-Agent releases
 
 ## Build
 
@@ -48,21 +48,52 @@ The build creates these files in `build/debug/`:
 
 The firmware uses these fixed IPv4 settings:
 
-- Address: `192.168.1.42`
+- Address: `192.168.137.42`
 - Netmask: `255.255.255.0`
-- Gateway and DNS: `192.168.1.1`
+- Gateway and DNS: `192.168.137.1`
 - TCP echo service: port `5000`
 
+These match Windows Internet Connection Sharing: connect the board to a
+Windows PC's Ethernet port and share the PC's internet connection to that
+adapter, which then takes `192.168.137.1` and serves routing and DNS.
+
 The locally administered MAC address is derived from the MCU's 96-bit unique
-identifier. Connect the board and a host to the same `192.168.1.0/24` network,
-then test ICMP and the echo service with:
+identifier. From a host on the `192.168.137.0/24` network, test ICMP and the
+echo service with:
 
 ```sh
-ping 192.168.1.42
-printf 'hello\n' | nc 192.168.1.42 5000
+ping 192.168.137.42
+printf 'hello\n' | nc 192.168.137.42 5000
 ```
 
 The second command should print `hello` back to the terminal.
+
+## MQTT
+
+Once the link is up, the firmware connects to `test.mosquitto.org` on port
+`1883` (plain TCP, MQTT 5) and publishes `{"temperature":36.6}` once a second,
+with QoS 0 and without retain, to:
+
+```text
+SBC/<Device ID>/temperature
+```
+
+The Device ID is the MCU's 96-bit unique identifier as 24 uppercase hex
+characters, highest-address word first. The MQTT client identifier is `sbc-`
+followed by the last 16 of those characters. The value is a fixed placeholder,
+not a sensor reading.
+
+The board's network must route to the internet on TCP port 1883. Watch the
+messages from a host with:
+
+```sh
+mosquitto_sub -h test.mosquitto.org -t 'SBC/+/temperature' -v
+```
+
+While the link or broker is unavailable, samples are dropped and the client
+reconnects with a backoff of 1 s doubling to 30 s; a link that comes back up
+triggers an immediate reconnect. The test broker is public, so anyone can
+read or publish to these topics.
 
 ## Project layout
 
@@ -86,5 +117,5 @@ The following official STMicroelectronics repositories are Git submodules under
 - [CMSIS Core](https://github.com/STMicroelectronics/cmsis-core.git), commit
   `afc5ca6af0a49232fde7eb4548dd0962d119ce14`
 
-FreeRTOS-Plus-TCP V4.4.1 is fetched at the exact commit recorded in
-`THIRD_PARTY_NOTICES.md`. The submodules pin the STM32 commits shown above.
+FreeRTOS-Plus-TCP V4.4.1, coreMQTT v5.0.2, and coreMQTT-Agent v2.0.0 are
+fetched at the exact commits recorded in `THIRD_PARTY_NOTICES.md`. The submodules pin the STM32 commits shown above.

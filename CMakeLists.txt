@@ -23,7 +23,10 @@ target_compile_options(freertos_plus_tcp_utilities PRIVATE
 add_executable(${PROJECT_NAME}
     src/ethernet.cpp
     src/main.cpp
+    src/mqtt_client.cpp
+    src/mqtt_transport.cpp
     src/tcp_echo_server.cpp
+    src/temperature_publisher.cpp
 )
 
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
@@ -32,6 +35,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     freertos_config
     freertos_plus_tcp
     freertos_plus_tcp_network_if
+    core_mqtt_agent
     stm32f407_platform
 )
 

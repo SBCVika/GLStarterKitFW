@@ -20,7 +20,7 @@ extern uint32_t SystemCoreClock;
 #define configTICK_RATE_HZ                      1000
 #define configMAX_PRIORITIES                    5
 #define configMINIMAL_STACK_SIZE                128
-#define configTOTAL_HEAP_SIZE                   (32 * 1024)
+#define configTOTAL_HEAP_SIZE                   (48 * 1024)
 #define configMAX_TASK_NAME_LEN                 16
 #define configTICK_TYPE_WIDTH_IN_BITS           TICK_TYPE_WIDTH_32_BITS
 #define configIDLE_SHOULD_YIELD                 1
@@ -47,6 +47,7 @@ extern uint32_t SystemCoreClock;
 #define configMAX_SYSCALL_INTERRUPT_PRIORITY    (5 << (8 - configPRIO_BITS))
 
 #define INCLUDE_vTaskDelay                      1
+#define INCLUDE_xTaskDelayUntil                 1
 #define INCLUDE_vTaskSuspend                    1
 
 #define vPortSVCHandler                         SVC_Handler

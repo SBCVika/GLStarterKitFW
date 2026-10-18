@@ -13,6 +13,20 @@ FreeRTOS-Plus-TCP V4.4.1 is fetched during CMake configuration from
 `c12361095aca68aeed858f45d14395fbffa92c0d`. It is distributed under the MIT
 License included with that project.
 
+## coreMQTT
+
+coreMQTT v5.0.2 is fetched during CMake configuration from
+<https://github.com/FreeRTOS/coreMQTT> at commit
+`04845c6a8e5f9cf2d232f1c6e80baeb81302e690`. It is distributed under the MIT
+License included with that project.
+
+## coreMQTT-Agent
+
+coreMQTT-Agent v2.0.0 is fetched during CMake configuration from
+<https://github.com/FreeRTOS/coreMQTT-Agent> at commit
+`2338d00db41196e4a1fce4bc3ab32f907e77f871`. It is distributed under the MIT
+License included with that project.
+
 ## STM32F4 HAL driver
 
 The STM32F4 HAL driver is cloned from

@@ -2,6 +2,8 @@
 
 #include <utility>
 
+#include "stm32f407/device_id.hpp"
+
 extern "C" {
 #include "FreeRTOS_Routing.h"
 #include "task.h"
@@ -14,17 +16,10 @@ NetworkInterface_t* pxSTM32_FillInterfaceDescriptor(BaseType_t index,
 
 namespace {
 
-std::uint32_t read_uid_word(std::size_t index)
-{
-    constexpr std::uintptr_t uid_base = 0x1FFF7A10U;
-    return *(reinterpret_cast<volatile const std::uint32_t*>(uid_base) + index);
-}
-
 std::array<std::uint8_t, 6> make_mac_address()
 {
     std::uint64_t hash = 14695981039346656037ULL;
-    for (std::size_t word_index = 0U; word_index < 3U; ++word_index) {
-        const std::uint32_t word = read_uid_word(word_index);
+    for (const std::uint32_t word : stm32f407::read_unique_id()) {
         for (std::size_t byte_index = 0U; byte_index < sizeof(word); ++byte_index) {
             hash ^= static_cast<std::uint8_t>(word >> (byte_index * 8U));
             hash *= 1099511628211ULL;
@@ -160,7 +155,8 @@ std::uint32_t Ethernet::next_random()
 {
     taskENTER_CRITICAL();
     if (random_state_ == 0U) {
-        random_state_ = read_uid_word(0U) ^ read_uid_word(1U) ^ read_uid_word(2U) ^
+        const auto uid = stm32f407::read_unique_id();
+        random_state_ = uid[0] ^ uid[1] ^ uid[2] ^
                         static_cast<std::uint32_t>(xTaskGetTickCount());
         if (random_state_ == 0U) {
             random_state_ = 0x6D2B79F5U;

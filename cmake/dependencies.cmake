@@ -31,3 +31,25 @@ FetchContent_Declare(
     GIT_SUBMODULES ""
 )
 FetchContent_MakeAvailable(freertos_plus_tcp)
+
+FetchContent_Declare(
+    core_mqtt
+    GIT_REPOSITORY https://github.com/FreeRTOS/coreMQTT.git
+    GIT_TAG 04845c6a8e5f9cf2d232f1c6e80baeb81302e690 # v5.0.2
+)
+FetchContent_Declare(
+    core_mqtt_agent
+    GIT_REPOSITORY https://github.com/FreeRTOS/coreMQTT-Agent.git
+    GIT_TAG 2338d00db41196e4a1fce4bc3ab32f907e77f871 # v2.0.0
+    GIT_SUBMODULES ""
+    # The repository has no top-level CMakeLists.txt; build it from its file list.
+    SOURCE_SUBDIR no-cmake-project
+)
+FetchContent_MakeAvailable(core_mqtt core_mqtt_agent)
+
+target_link_libraries(core_mqtt PUBLIC freertos_config)
+
+include(${core_mqtt_agent_SOURCE_DIR}/mqttAgentFilePaths.cmake)
+add_library(core_mqtt_agent STATIC ${MQTT_AGENT_SOURCES})
+target_include_directories(core_mqtt_agent PUBLIC ${MQTT_AGENT_INCLUDE_PUBLIC_DIRS})
+target_link_libraries(core_mqtt_agent PUBLIC core_mqtt)
