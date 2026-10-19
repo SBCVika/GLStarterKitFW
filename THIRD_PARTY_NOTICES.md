@@ -48,5 +48,12 @@ at commit `afc5ca6af0a49232fde7eb4548dd0962d119ce14`. It is distributed under th
 Apache License 2.0; bundled third-party attributions are included in
 `third_party/cmsis-core/LICENSE.md`.
 
+## LSM9DS1 driver
+
+The STMicroelectronics LSM9DS1 platform-independent driver v2.2.1 is cloned from
+<https://github.com/STMicroelectronics/lsm9ds1-pid.git> at commit
+`fc35df5921119702e13bc28f9507a9902af696fc`. It is distributed under the BSD
+3-Clause License in `third_party/lsm9ds1-pid/LICENSE`.
+
 These third-party files are not covered by any license applied to
 project-authored source code.

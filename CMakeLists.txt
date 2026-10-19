@@ -24,6 +24,7 @@ add_executable(${PROJECT_NAME}
     src/ethernet.cpp
     src/humidity_publisher.cpp
     src/main.cpp
+    src/motion_publisher.cpp
     src/mqtt_client.cpp
     src/mqtt_transport.cpp
     src/tcp_echo_server.cpp

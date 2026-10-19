@@ -3,7 +3,9 @@ add_library(stm32f407_platform OBJECT
     src/device_id.cpp
     src/dht11.cpp
     src/ethernet.c
+    src/i2c1.cpp
     src/keyboard.cpp
+    src/lsm9ds1.cpp
     src/system.cpp
     ${PROJECT_SOURCE_DIR}/third_party/cmsis-device-f4/Source/Templates/gcc/startup_stm32f407xx.s
 )
@@ -18,5 +20,6 @@ target_include_directories(stm32f407_platform PUBLIC include)
 target_link_libraries(stm32f407_platform PUBLIC
     freertos_kernel
     freertos_plus_tcp_network_if_common
+    lsm9ds1_pid
     stm32f4_hal
 )

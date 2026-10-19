@@ -7,3 +7,6 @@
 [submodule "third_party/cmsis-core"]
 	path = third_party/cmsis-core
 	url = https://github.com/STMicroelectronics/cmsis-core.git
+[submodule "third_party/lsm9ds1-pid"]
+	path = third_party/lsm9ds1-pid
+	url = https://github.com/STMicroelectronics/lsm9ds1-pid.git
