@@ -1,5 +1,7 @@
 #include "temperature_publisher.hpp"
 
+#include <algorithm>
+#include <charconv>
 #include <cstddef>
 #include <cstring>
 #include <initializer_list>
@@ -12,8 +14,26 @@ namespace {
 
 constexpr configSTACK_DEPTH_TYPE publisher_stack_depth = 512U;
 constexpr UBaseType_t publisher_task_priority = tskIDLE_PRIORITY + 1U;
-constexpr TickType_t publish_period = pdMS_TO_TICKS(1000U);
-constexpr char payload[] = R"({"temperature":36.6})";
+constexpr TickType_t retry_period = pdMS_TO_TICKS(1000U);
+
+// Formats tenths of a degree Celsius as {"temperature":-12.3}.
+std::array<char, 32> make_payload(std::int16_t temperature)
+{
+    constexpr char prefix[] = R"({"temperature":)";
+
+    std::array<char, 32> payload{};
+    char* end = std::copy_n(prefix, sizeof(prefix) - 1U, payload.begin());
+    int magnitude = temperature;
+    if (magnitude < 0) {
+        *end++ = '-';
+        magnitude = -magnitude;
+    }
+    end = std::to_chars(end, payload.end(), magnitude / 10).ptr;
+    *end++ = '.';
+    *end++ = static_cast<char>('0' + magnitude % 10);
+    *end = '}';
+    return payload;
+}
 
 } // namespace
 
@@ -33,12 +53,22 @@ TemperaturePublisher::TemperaturePublisher(MqttClient& client,
 
 bool TemperaturePublisher::start()
 {
+    changes_ = xQueueCreate(1U, sizeof(std::int16_t));
+    if (changes_ == nullptr) {
+        return false;
+    }
+
     return xTaskCreate(task_entry,
                        "temperature",
                        publisher_stack_depth,
                        this,
                        publisher_task_priority,
                        nullptr) == pdPASS;
+}
+
+void TemperaturePublisher::on_temperature_changed(std::int16_t temperature)
+{
+    (void)xQueueOverwrite(changes_, &temperature);
 }
 
 void TemperaturePublisher::task_entry(void* context)
@@ -48,11 +78,12 @@ void TemperaturePublisher::task_entry(void* context)
 
 void TemperaturePublisher::run()
 {
-    TickType_t last_wake = xTaskGetTickCount();
+    std::int16_t temperature = 0;
+    bool pending = false;
     for (;;) {
-        xTaskDelayUntil(&last_wake, publish_period);
-        // Samples taken while disconnected are dropped.
-        client_.publish(topic_.data(), payload);
+        // Times out only while a temperature is still pending, to retry it.
+        (void)xQueueReceive(changes_, &temperature, pending ? retry_period : portMAX_DELAY);
+        pending = !client_.publish(topic_.data(), make_payload(temperature).data());
     }
 }
 

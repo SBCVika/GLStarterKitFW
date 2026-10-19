@@ -22,6 +22,7 @@ target_compile_options(freertos_plus_tcp_utilities PRIVATE
 
 add_executable(${PROJECT_NAME}
     src/ethernet.cpp
+    src/humidity_publisher.cpp
     src/main.cpp
     src/mqtt_client.cpp
     src/mqtt_transport.cpp

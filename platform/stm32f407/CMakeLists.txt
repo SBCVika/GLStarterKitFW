@@ -1,6 +1,7 @@
 add_library(stm32f407_platform OBJECT
     src/board.cpp
     src/device_id.cpp
+    src/dht11.cpp
     src/ethernet.c
     src/keyboard.cpp
     src/system.cpp

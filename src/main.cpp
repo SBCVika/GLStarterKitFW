@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <array>
+#include <cstdint>
 
 extern "C" {
 #include "FreeRTOS.h"
@@ -8,9 +9,11 @@ extern "C" {
 
 #include "stm32f407/board.hpp"
 #include "stm32f407/device_id.hpp"
+#include "stm32f407/dht11.hpp"
 #include "stm32f407/keyboard.hpp"
 
 #include "ethernet.hpp"
+#include "humidity_publisher.hpp"
 #include "mqtt_client.hpp"
 #include "tcp_echo_server.hpp"
 #include "temperature_publisher.hpp"
@@ -53,6 +56,12 @@ const stm32f407::DeviceId device_id = stm32f407::read_device_id();
 const std::array<char, 21> mqtt_client_id = make_mqtt_client_id(device_id);
 network::MqttClient mqtt_client{{"test.mosquitto.org", 1883U}, mqtt_client_id.data()};
 network::TemperaturePublisher temperature_publisher{mqtt_client, device_id};
+network::HumidityPublisher humidity_publisher{mqtt_client, device_id};
+
+stm32f407::Dht11 climate_sensor;
+// Whole percent and tenths of a degree Celsius, matching the DHT11's 1 % and 1 °C resolution.
+constexpr std::uint8_t humidity_reporting_threshold = 1U;
+constexpr std::uint16_t temperature_reporting_threshold = 10U;
 
 void led_task(void*)
 {
@@ -112,9 +121,14 @@ int main()
     }
 
     if (!mqtt_client.start() || !ethernet.add_link_state_client(mqtt_client) ||
-        !temperature_publisher.start()) {
+        !temperature_publisher.start() || !humidity_publisher.start()) {
         stm32f407::halt();
     }
+
+    climate_sensor.set_humidity_listener(&humidity_publisher, humidity_reporting_threshold);
+    climate_sensor.set_temperature_listener(&temperature_publisher,
+                                            temperature_reporting_threshold);
+    climate_sensor.start();
 
     vTaskStartScheduler();
     stm32f407::halt();
