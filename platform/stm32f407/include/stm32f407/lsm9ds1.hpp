@@ -1,5 +1,7 @@
 #pragma once
 
+#include <array>
+#include <cstddef>
 #include <cstdint>
 #include <optional>
 
@@ -53,11 +55,12 @@ public:
     Lsm9ds1(Lsm9ds1&&) = delete;
     Lsm9ds1& operator=(Lsm9ds1&&) = delete;
 
-    // Listeners must be set before start(). Thresholds are at least 1, in the
-    // listener's units.
-    void set_acceleration_listener(IAccelerationListener* listener, std::int32_t threshold);
-    void set_angular_rate_listener(IAngularRateListener* listener, std::int32_t threshold);
-    void set_magnetic_field_listener(IMagneticFieldListener* listener, std::int32_t threshold);
+    // Listeners must be added before start(); each reading takes up to two.
+    // Returns false when that reading's listeners are full. Thresholds are at
+    // least 1, in the listener's units.
+    bool add_acceleration_listener(IAccelerationListener& listener, std::int32_t threshold);
+    bool add_angular_rate_listener(IAngularRateListener& listener, std::int32_t threshold);
+    bool add_magnetic_field_listener(IMagneticFieldListener& listener, std::int32_t threshold);
 
     // Returns false when the sensor does not answer or cannot be configured.
     bool start();
@@ -68,6 +71,24 @@ public:
     std::optional<Vector3> magnetic_field() const;
 
 private:
+    static constexpr std::size_t max_listeners = 2U;
+
+    template <typename Listener>
+    struct Subscription {
+        Listener* listener;
+        std::int32_t threshold;
+        std::optional<Vector3> reported;
+    };
+
+    template <typename Listener>
+    struct Subscriptions {
+        std::array<Subscription<Listener>, max_listeners> entries{};
+        std::size_t count = 0U;
+    };
+
+    template <typename Listener>
+    bool add(Subscriptions<Listener>& subscriptions, Listener& listener, std::int32_t threshold);
+
     static void task_entry(void* context);
     static std::int32_t read_imu(void* context,
                                  std::uint8_t reg,
@@ -94,17 +115,9 @@ private:
 
     I2c1& bus_;
 
-    IAccelerationListener* acceleration_listener_ = nullptr;
-    std::int32_t acceleration_threshold_ = 1;
-    std::optional<Vector3> reported_acceleration_;
-
-    IAngularRateListener* angular_rate_listener_ = nullptr;
-    std::int32_t angular_rate_threshold_ = 1;
-    std::optional<Vector3> reported_angular_rate_;
-
-    IMagneticFieldListener* magnetic_field_listener_ = nullptr;
-    std::int32_t magnetic_field_threshold_ = 1;
-    std::optional<Vector3> reported_magnetic_field_;
+    Subscriptions<IAccelerationListener> acceleration_subscriptions_;
+    Subscriptions<IAngularRateListener> angular_rate_subscriptions_;
+    Subscriptions<IMagneticFieldListener> magnetic_field_subscriptions_;
 
     std::optional<Vector3> acceleration_;
     std::optional<Vector3> angular_rate_;

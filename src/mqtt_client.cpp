@@ -87,6 +87,19 @@ MqttClient::MqttClient(MqttBroker broker, const char* client_id)
 {
 }
 
+bool MqttClient::add_broker_connection_listener(IBrokerConnectionListener& listener)
+{
+    configASSERT(!started_);
+
+    if (listener_count_ == listeners_.size()) {
+        return false;
+    }
+
+    listeners_[listener_count_] = &listener;
+    ++listener_count_;
+    return true;
+}
+
 bool MqttClient::start()
 {
     configASSERT(!started_);
@@ -190,10 +203,10 @@ void MqttClient::run()
             retry_delay = min_retry_delay;
             // Drop publishes queued before this connection existed.
             (void)MQTTAgent_CancelAll(&agent_);
-            connected_ = true;
+            set_connected(true);
             // Returns once the connection fails.
             (void)MQTTAgent_CommandLoop(&agent_);
-            connected_ = false;
+            set_connected(false);
             (void)MQTT_Disconnect(&agent_.mqttContext, nullptr, nullptr);
         }
         mqtt_transport_disconnect(network_);
@@ -202,6 +215,14 @@ void MqttClient::run()
         // A link that comes back up ends the wait early.
         xEventGroupWaitBits(link_events_, link_came_up_bit, pdTRUE, pdTRUE, retry_delay);
         retry_delay = std::min<TickType_t>(retry_delay * 2U, max_retry_delay);
+    }
+}
+
+void MqttClient::set_connected(bool connected)
+{
+    connected_ = connected;
+    for (std::size_t index = 0U; index < listener_count_; ++index) {
+        listeners_[index]->on_broker_connection_changed(connected);
     }
 }
 

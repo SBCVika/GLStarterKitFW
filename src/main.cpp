@@ -13,6 +13,7 @@ extern "C" {
 #include "stm32f407/i2c1.hpp"
 #include "stm32f407/keyboard.hpp"
 #include "stm32f407/lsm9ds1.hpp"
+#include "stm32f407/wh1602.hpp"
 
 #include "ethernet.hpp"
 #include "humidity_publisher.hpp"
@@ -20,6 +21,7 @@ extern "C" {
 #include "mqtt_client.hpp"
 #include "tcp_echo_server.hpp"
 #include "temperature_publisher.hpp"
+#include "ui.hpp"
 
 namespace {
 
@@ -27,7 +29,7 @@ class KeyboardListener final : public stm32f407::IButtonListener {
 public:
     void on_button_event(const stm32f407::ButtonEvent& event) override
     {
-        if (event.button == stm32f407::Button::SW1 &&
+        if (event.button == stm32f407::Button::SW2 &&
             event.type == stm32f407::ButtonEventType::PRESSED) {
             stm32f407::toggle_green_led();
         }
@@ -73,6 +75,15 @@ stm32f407::Lsm9ds1 motion_sensor{i2c1};
 constexpr std::int32_t acceleration_reporting_threshold = 5;
 constexpr std::int32_t angular_rate_reporting_threshold = 500;
 constexpr std::int32_t magnetic_field_reporting_threshold = 5;
+
+stm32f407::Wh1602 display;
+ui::Ui user_interface{display, ethernet_config.ip};
+// One step of each Screen's last shown digit: 0.1 °C, 1 %, 0.01 g, 1 dps and 0.01 G.
+constexpr std::uint16_t ui_temperature_threshold = 1U;
+constexpr std::uint8_t ui_humidity_threshold = 1U;
+constexpr std::int32_t ui_acceleration_threshold = 10;
+constexpr std::int32_t ui_angular_rate_threshold = 1000;
+constexpr std::int32_t ui_magnetic_field_threshold = 10;
 
 void led_task(void*)
 {
@@ -123,33 +134,55 @@ int main()
         stm32f407::halt();
     }
 
-    keyboard.set_listener(&keyboard_listener);
-    keyboard.start();
-
-    if (!ethernet.start() || !echo_server.start() ||
-        !ethernet.add_link_state_client(echo_server)) {
+    // The UI's task must exist before any of its sources can report to it.
+    if (!user_interface.start()) {
         stm32f407::halt();
     }
 
-    if (!mqtt_client.start() || !ethernet.add_link_state_client(mqtt_client) ||
+    if (!keyboard.add_listener(keyboard_listener) || !keyboard.add_listener(user_interface)) {
+        stm32f407::halt();
+    }
+    keyboard.start();
+
+    if (!ethernet.start() || !echo_server.start() ||
+        !ethernet.add_link_state_client(echo_server) ||
+        !ethernet.add_link_state_client(user_interface)) {
+        stm32f407::halt();
+    }
+
+    if (!mqtt_client.add_broker_connection_listener(user_interface) || !mqtt_client.start() ||
+        !ethernet.add_link_state_client(mqtt_client) ||
         !temperature_publisher.start() || !humidity_publisher.start() ||
         !motion_publisher.start()) {
         stm32f407::halt();
     }
 
-    climate_sensor.set_humidity_listener(&humidity_publisher, humidity_reporting_threshold);
-    climate_sensor.set_temperature_listener(&temperature_publisher,
-                                            temperature_reporting_threshold);
+    if (!climate_sensor.add_humidity_listener(humidity_publisher,
+                                              humidity_reporting_threshold) ||
+        !climate_sensor.add_temperature_listener(temperature_publisher,
+                                                 temperature_reporting_threshold) ||
+        !climate_sensor.add_humidity_listener(user_interface, ui_humidity_threshold) ||
+        !climate_sensor.add_temperature_listener(user_interface, ui_temperature_threshold)) {
+        stm32f407::halt();
+    }
     climate_sensor.start();
 
     if (!i2c1.start()) {
         stm32f407::halt();
     }
 
-    motion_sensor.set_acceleration_listener(&motion_publisher, acceleration_reporting_threshold);
-    motion_sensor.set_angular_rate_listener(&motion_publisher, angular_rate_reporting_threshold);
-    motion_sensor.set_magnetic_field_listener(&motion_publisher,
-                                              magnetic_field_reporting_threshold);
+    if (!motion_sensor.add_acceleration_listener(motion_publisher,
+                                                 acceleration_reporting_threshold) ||
+        !motion_sensor.add_angular_rate_listener(motion_publisher,
+                                                 angular_rate_reporting_threshold) ||
+        !motion_sensor.add_magnetic_field_listener(motion_publisher,
+                                                   magnetic_field_reporting_threshold) ||
+        !motion_sensor.add_acceleration_listener(user_interface, ui_acceleration_threshold) ||
+        !motion_sensor.add_angular_rate_listener(user_interface, ui_angular_rate_threshold) ||
+        !motion_sensor.add_magnetic_field_listener(user_interface,
+                                                   ui_magnetic_field_threshold)) {
+        stm32f407::halt();
+    }
     // A missing motion sensor leaves the rest of the board running.
     (void)motion_sensor.start();
 

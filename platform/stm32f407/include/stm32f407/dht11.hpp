@@ -1,5 +1,7 @@
 #pragma once
 
+#include <array>
+#include <cstddef>
 #include <cstdint>
 #include <optional>
 
@@ -35,10 +37,11 @@ public:
     Dht11(Dht11&&) = delete;
     Dht11& operator=(Dht11&&) = delete;
 
-    // Listeners must be set before start(). Thresholds are at least 1, in
-    // whole percent and tenths of a degree Celsius respectively.
-    void set_humidity_listener(IHumidityListener* listener, std::uint8_t threshold);
-    void set_temperature_listener(ITemperatureListener* listener, std::uint16_t threshold);
+    // Listeners must be added before start(); each reading takes up to two.
+    // Returns false when that reading's listeners are full. Thresholds are at
+    // least 1, in whole percent and tenths of a degree Celsius respectively.
+    bool add_humidity_listener(IHumidityListener& listener, std::uint8_t threshold);
+    bool add_temperature_listener(ITemperatureListener& listener, std::uint16_t threshold);
     void start();
 
     // Latest valid readings, empty until the first one.
@@ -46,19 +49,31 @@ public:
     std::optional<std::int16_t> temperature() const;
 
 private:
+    static constexpr std::size_t max_listeners = 2U;
+
+    struct HumiditySubscription {
+        IHumidityListener* listener;
+        std::uint8_t threshold;
+        std::optional<std::uint8_t> reported;
+    };
+
+    struct TemperatureSubscription {
+        ITemperatureListener* listener;
+        std::uint16_t threshold;
+        std::optional<std::int16_t> reported;
+    };
+
     static void task_entry(void* context);
 
     void configure_pin();
     bool read_frame(std::uint8_t (&frame)[5]);
     void report(std::uint8_t humidity, std::int16_t temperature);
 
-    IHumidityListener* humidity_listener_ = nullptr;
-    std::uint8_t humidity_threshold_ = 1U;
-    std::optional<std::uint8_t> reported_humidity_;
+    std::array<HumiditySubscription, max_listeners> humidity_subscriptions_{};
+    std::size_t humidity_subscription_count_ = 0U;
 
-    ITemperatureListener* temperature_listener_ = nullptr;
-    std::uint16_t temperature_threshold_ = 1U;
-    std::optional<std::int16_t> reported_temperature_;
+    std::array<TemperatureSubscription, max_listeners> temperature_subscriptions_{};
+    std::size_t temperature_subscription_count_ = 0U;
 
     std::optional<std::uint8_t> humidity_;
     std::optional<std::int16_t> temperature_;

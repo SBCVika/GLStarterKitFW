@@ -29,6 +29,7 @@ add_executable(${PROJECT_NAME}
     src/mqtt_transport.cpp
     src/tcp_echo_server.cpp
     src/temperature_publisher.cpp
+    src/ui.cpp
 )
 
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)

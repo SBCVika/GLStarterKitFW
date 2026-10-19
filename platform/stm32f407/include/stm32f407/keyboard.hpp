@@ -1,5 +1,7 @@
 #pragma once
 
+#include <array>
+#include <cstddef>
 #include <cstdint>
 
 namespace stm32f407 {
@@ -39,7 +41,8 @@ public:
     Keyboard(Keyboard&&) = delete;
     Keyboard& operator=(Keyboard&&) = delete;
 
-    void set_listener(IButtonListener* listener);
+    // Listeners must be added before start(). Returns false when two are already added.
+    bool add_listener(IButtonListener& listener);
     void start();
 
 private:
@@ -51,9 +54,12 @@ private:
     void report_state_changes();
     bool read_button(Button button) const;
 
+    static constexpr std::size_t max_listeners = 2U;
+
     static Keyboard* instance_;
 
-    IButtonListener* listener_ = nullptr;
+    std::array<IButtonListener*, max_listeners> listeners_{};
+    std::size_t listener_count_ = 0U;
     void* task_handle_ = nullptr;
     bool button_states_[5]{};
     bool started_ = false;

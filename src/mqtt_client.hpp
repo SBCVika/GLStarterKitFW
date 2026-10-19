@@ -2,6 +2,7 @@
 
 #include <array>
 #include <atomic>
+#include <cstddef>
 #include <cstdint>
 
 #include "ethernet.hpp"
@@ -19,6 +20,14 @@ struct MqttBroker {
     std::uint16_t port;
 };
 
+class IBrokerConnectionListener {
+public:
+    virtual void on_broker_connection_changed(bool connected) = 0;
+
+protected:
+    ~IBrokerConnectionListener() = default;
+};
+
 // Owns the broker connection and runs the coreMQTT agent task that serves it.
 class MqttClient final : public ILinkStateClient {
 public:
@@ -29,6 +38,9 @@ public:
     MqttClient(MqttClient&&) = delete;
     MqttClient& operator=(MqttClient&&) = delete;
 
+    // Listeners must be added before start() and run in the agent task.
+    // Returns false when two are already added.
+    bool add_broker_connection_listener(IBrokerConnectionListener& listener);
     bool start();
     void on_link_state_changed(LinkState state) override;
 
@@ -37,10 +49,13 @@ public:
     bool publish(const char* topic, const char* payload);
 
 private:
+    static constexpr std::size_t max_listeners = 2U;
+
     static void task_entry(void* context);
 
     void run();
     bool connect_to_broker();
+    void set_connected(bool connected);
 
     MqttBroker broker_;
     const char* client_id_;
@@ -50,6 +65,8 @@ private:
     EventGroupHandle_t link_events_ = nullptr;
     std::atomic<bool> link_up_{false};
     std::atomic<bool> connected_{false};
+    std::array<IBrokerConnectionListener*, max_listeners> listeners_{};
+    std::size_t listener_count_ = 0U;
     bool started_ = false;
 };
 

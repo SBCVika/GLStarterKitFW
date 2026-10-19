@@ -54,32 +54,37 @@ bool crossed(const std::optional<stm32f407::Vector3>& reported,
 
 namespace stm32f407 {
 
-void Lsm9ds1::set_acceleration_listener(IAccelerationListener* listener, std::int32_t threshold)
+template <typename Listener>
+bool Lsm9ds1::add(Subscriptions<Listener>& subscriptions,
+                  Listener& listener,
+                  std::int32_t threshold)
 {
     configASSERT(!started_);
     configASSERT(threshold >= 1);
 
-    acceleration_listener_ = listener;
-    acceleration_threshold_ = threshold;
+    if (subscriptions.count == subscriptions.entries.size()) {
+        return false;
+    }
+
+    subscriptions.entries[subscriptions.count] = {&listener, threshold, std::nullopt};
+    ++subscriptions.count;
+    return true;
 }
 
-void Lsm9ds1::set_angular_rate_listener(IAngularRateListener* listener, std::int32_t threshold)
+bool Lsm9ds1::add_acceleration_listener(IAccelerationListener& listener, std::int32_t threshold)
 {
-    configASSERT(!started_);
-    configASSERT(threshold >= 1);
-
-    angular_rate_listener_ = listener;
-    angular_rate_threshold_ = threshold;
+    return add(acceleration_subscriptions_, listener, threshold);
 }
 
-void Lsm9ds1::set_magnetic_field_listener(IMagneticFieldListener* listener,
+bool Lsm9ds1::add_angular_rate_listener(IAngularRateListener& listener, std::int32_t threshold)
+{
+    return add(angular_rate_subscriptions_, listener, threshold);
+}
+
+bool Lsm9ds1::add_magnetic_field_listener(IMagneticFieldListener& listener,
                                           std::int32_t threshold)
 {
-    configASSERT(!started_);
-    configASSERT(threshold >= 1);
-
-    magnetic_field_listener_ = listener;
-    magnetic_field_threshold_ = threshold;
+    return add(magnetic_field_subscriptions_, listener, threshold);
 }
 
 bool Lsm9ds1::start()
@@ -236,22 +241,28 @@ void Lsm9ds1::report(const Vector3& acceleration,
     magnetic_field_ = magnetic_field;
     taskEXIT_CRITICAL();
 
-    if (acceleration_listener_ != nullptr &&
-        crossed(reported_acceleration_, acceleration, acceleration_threshold_)) {
-        reported_acceleration_ = acceleration;
-        acceleration_listener_->on_acceleration_changed(acceleration);
+    for (std::size_t index = 0U; index < acceleration_subscriptions_.count; ++index) {
+        auto& subscription = acceleration_subscriptions_.entries[index];
+        if (crossed(subscription.reported, acceleration, subscription.threshold)) {
+            subscription.reported = acceleration;
+            subscription.listener->on_acceleration_changed(acceleration);
+        }
     }
 
-    if (angular_rate_listener_ != nullptr &&
-        crossed(reported_angular_rate_, angular_rate, angular_rate_threshold_)) {
-        reported_angular_rate_ = angular_rate;
-        angular_rate_listener_->on_angular_rate_changed(angular_rate);
+    for (std::size_t index = 0U; index < angular_rate_subscriptions_.count; ++index) {
+        auto& subscription = angular_rate_subscriptions_.entries[index];
+        if (crossed(subscription.reported, angular_rate, subscription.threshold)) {
+            subscription.reported = angular_rate;
+            subscription.listener->on_angular_rate_changed(angular_rate);
+        }
     }
 
-    if (magnetic_field_listener_ != nullptr &&
-        crossed(reported_magnetic_field_, magnetic_field, magnetic_field_threshold_)) {
-        reported_magnetic_field_ = magnetic_field;
-        magnetic_field_listener_->on_magnetic_field_changed(magnetic_field);
+    for (std::size_t index = 0U; index < magnetic_field_subscriptions_.count; ++index) {
+        auto& subscription = magnetic_field_subscriptions_.entries[index];
+        if (crossed(subscription.reported, magnetic_field, subscription.threshold)) {
+            subscription.reported = magnetic_field;
+            subscription.listener->on_magnetic_field_changed(magnetic_field);
+        }
     }
 }
 

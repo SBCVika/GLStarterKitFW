@@ -52,11 +52,17 @@ Keyboard::Keyboard()
     instance_ = this;
 }
 
-void Keyboard::set_listener(IButtonListener* listener)
+bool Keyboard::add_listener(IButtonListener& listener)
 {
-    taskENTER_CRITICAL();
-    listener_ = listener;
-    taskEXIT_CRITICAL();
+    configASSERT(!started_);
+
+    if (listener_count_ == listeners_.size()) {
+        return false;
+    }
+
+    listeners_[listener_count_] = &listener;
+    ++listener_count_;
+    return true;
 }
 
 void Keyboard::start()
@@ -141,15 +147,12 @@ void Keyboard::report_state_changes()
 
         button_states_[index] = pressed;
 
-        taskENTER_CRITICAL();
-        IButtonListener* listener = listener_;
-        taskEXIT_CRITICAL();
-
-        if (listener != nullptr) {
-            listener->on_button_event(ButtonEvent{
-                buttons[index],
-                pressed ? ButtonEventType::PRESSED : ButtonEventType::RELEASED,
-            });
+        const ButtonEvent event{
+            buttons[index],
+            pressed ? ButtonEventType::PRESSED : ButtonEventType::RELEASED,
+        };
+        for (std::size_t listener = 0U; listener < listener_count_; ++listener) {
+            listeners_[listener]->on_button_event(event);
         }
     }
 }

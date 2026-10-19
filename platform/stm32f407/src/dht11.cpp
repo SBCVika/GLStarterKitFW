@@ -44,22 +44,33 @@ bool wait_while(bool high, std::uint32_t timeout_cycles, std::uint32_t& held_cyc
 
 namespace stm32f407 {
 
-void Dht11::set_humidity_listener(IHumidityListener* listener, std::uint8_t threshold)
+bool Dht11::add_humidity_listener(IHumidityListener& listener, std::uint8_t threshold)
 {
     configASSERT(!started_);
     configASSERT(threshold >= 1U);
 
-    humidity_listener_ = listener;
-    humidity_threshold_ = threshold;
+    if (humidity_subscription_count_ == humidity_subscriptions_.size()) {
+        return false;
+    }
+
+    humidity_subscriptions_[humidity_subscription_count_] = {&listener, threshold, std::nullopt};
+    ++humidity_subscription_count_;
+    return true;
 }
 
-void Dht11::set_temperature_listener(ITemperatureListener* listener, std::uint16_t threshold)
+bool Dht11::add_temperature_listener(ITemperatureListener& listener, std::uint16_t threshold)
 {
     configASSERT(!started_);
     configASSERT(threshold >= 1U);
 
-    temperature_listener_ = listener;
-    temperature_threshold_ = threshold;
+    if (temperature_subscription_count_ == temperature_subscriptions_.size()) {
+        return false;
+    }
+
+    temperature_subscriptions_[temperature_subscription_count_] = {
+        &listener, threshold, std::nullopt};
+    ++temperature_subscription_count_;
+    return true;
 }
 
 void Dht11::start()
@@ -172,18 +183,23 @@ void Dht11::report(std::uint8_t humidity, std::int16_t temperature)
     temperature_ = temperature;
     taskEXIT_CRITICAL();
 
-    if (humidity_listener_ != nullptr &&
-        (!reported_humidity_ ||
-         std::abs(humidity - reported_humidity_.value_or(0U)) >= humidity_threshold_)) {
-        reported_humidity_ = humidity;
-        humidity_listener_->on_humidity_changed(humidity);
+    for (std::size_t index = 0U; index < humidity_subscription_count_; ++index) {
+        HumiditySubscription& subscription = humidity_subscriptions_[index];
+        if (!subscription.reported ||
+            std::abs(humidity - subscription.reported.value_or(0U)) >= subscription.threshold) {
+            subscription.reported = humidity;
+            subscription.listener->on_humidity_changed(humidity);
+        }
     }
 
-    if (temperature_listener_ != nullptr &&
-        (!reported_temperature_ ||
-         std::abs(temperature - reported_temperature_.value_or(0)) >= temperature_threshold_)) {
-        reported_temperature_ = temperature;
-        temperature_listener_->on_temperature_changed(temperature);
+    for (std::size_t index = 0U; index < temperature_subscription_count_; ++index) {
+        TemperatureSubscription& subscription = temperature_subscriptions_[index];
+        if (!subscription.reported ||
+            std::abs(temperature - subscription.reported.value_or(0)) >=
+                subscription.threshold) {
+            subscription.reported = temperature;
+            subscription.listener->on_temperature_changed(temperature);
+        }
     }
 }
 
